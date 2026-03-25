@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRoPS: Dynamic 3D Reconstruction of Pre-scanned Objects</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="./assets/logo.png">
+
+    <style>
+        :root {
+            /* Deep slate/navy dark mode instead of Google's charcoal */
+            --bg-color: #0b1120;
+            --card-bg: #151e32;
+            
+            /* Electric sky blue instead of pastel Google blue */
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.25);
+            --accent-hover: #0ea5e9;
+            
+            /* Crisp text colors */
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-subtle: rgba(56, 189, 248, 0.15);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            line-height: 1.6;
+        }
+
+        /* --- Page layout with TOC sidebar --- */
+        .page-layout { display: block; }
+
+        /* --- TOC Sidebar --- */
+        .toc-sidebar {
+            position: fixed;
+            top: 40px;
+            left: max(12px, calc(47vw - 600px - 16px - 240px));
+            width: 240px;
+            padding: 24px 16px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 100;
+            transition: opacity 0.2s;
+        }
+
+        .toc-sidebar.toc-clamped {
+            opacity: 0.6;
+        }
+
+        .toc-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--accent);
+            margin: 0 0 16px 4px;
+            opacity: 0.8;
+        }
+
+        .toc-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .toc-list li a {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border-left: 2px solid transparent;
+            transition: all 0.2s ease;
+            line-height: 1.4;
+        }
+
+        .toc-list li a:hover {
+            color: var(--text-main);
+            background: rgba(56, 189, 248, 0.05);
+            border-left-color: rgba(56, 189, 248, 0.4);
+        }
+
+        .toc-list li a.toc-active {
+            color: var(--accent);
+            background: rgba(56, 189, 248, 0.1);
+            border-left-color: var(--accent);
+            font-weight: 600;
+        }
+
+        @keyframes section-pulse {
+            0%   { box-shadow: 0 0 0 0px rgba(56, 189, 248, 0); }
+            30%  { box-shadow: 0 0 0 6px rgba(56, 189, 248, 0.2); }
+            70%  { box-shadow: 0 0 0 10px rgba(56, 189, 248, 0.1); }
+            100% { box-shadow: 0 0 0 14px rgba(56, 189, 248, 0); }
+        }
+
+        .section-pulse {
+            animation: section-pulse 0.9s ease-out;
+            border-radius: 14px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* --- Header & Authors --- */
+        .header-section {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-size: 2.7rem;
+            margin: 0 0 15px 0;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.02em;
+        }
+
+        .authors {
+            font-size: 1.15rem;
+            font-weight: 500;
+            color: var(--text-main);
+            margin-bottom: 12px;
+            line-height: 1.8;
+        }
+
+        .authors sup {
+            color: var(--accent);
+            margin-left: 2px;
+        }
+
+        .authors a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .authors a:hover {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+
+        .author-block {
+            display: inline-block;
+            margin: 0 8px;
+        }
+
+        .affiliations {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+        }
+
+        .affiliations sup {
+            color: var(--accent);
+            margin-right: 4px;
+        }
+
+        .affil-block {
+            display: inline-block;
+            margin: 0 12px;
+        }
+
+        .header-chips {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-top: 18px;
+        }
+
+        .header-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            border-radius: 999px;
+            background: #2b3440;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #f8fafc;
+            text-decoration: none;
+            font-size: 1.29rem;
+            line-height: 1;
+            font-weight: 500;
+            padding: 10px 20px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .header-chip:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+            background: #313d4d;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+        }
+
+        .header-chip svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .header-chip-disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .chip-soon {
+            font-size: 0.85rem;
+            margin-left: 6px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* --- Carousel & Layout Styles --- */
+        .carousel-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            color: var(--accent);
+            font-size: 1.8rem;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .nav-btn:hover {
+            background: rgba(56, 189, 248, 0.1);
+            color: #fff;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .showcase-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 25px;
+            flex-grow: 1;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
+            transition: opacity 0.3s ease;
+        }
+
+        .demo-title {
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin: 0 0 20px 0;
+            color: var(--accent);
+            letter-spacing: 0.5px;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .video-col {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .col-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 0 4px;
+        }
+
+        h4 {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 500;
+            color: #e2e8f0;
+        }
+
+        /* --- Video Containers --- */
+        .video-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .stacked-videos video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        #vid-clean { z-index: 1; }
+        #vid-traj { z-index: 2; opacity: 1; pointer-events: auto; }
+
+        /* --- Toggle Switch --- */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #334155;
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #fff;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        /* --- Navigation Dots --- */
+        .nav-dots {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 60px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #334155;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dot.active {
+            background: var(--accent);
+            transform: scale(1.4);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        /* --- Links Section --- */
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        a.dataset-link {
+            display: flex;
+            flex-direction: column;
+            background-color: var(--card-bg);
+            color: #fff;
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border-subtle);
+            transition: all 0.3s ease;
+        }
+
+        a.dataset-link:hover {
+            background-color: #1e293b;
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+
+        .desc {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 400;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        .abstract-card,
+        .pipeline-card {
+            background: linear-gradient(180deg, rgba(21, 30, 50, 0.98) 0%, rgba(15, 23, 42, 0.96) 100%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+        }
+
+        .abstract-card {
+            padding: 28px 30px;
+        }
+
+        .abstract-card p {
+            margin: 0;
+            color: var(--text-main);
+            font-size: 1.02rem;
+            line-height: 1.85;
+        }
+
+        .pipeline-card {
+            padding: 24px;
+            overflow: hidden;
+        }
+
+        .pipeline-figure {
+            margin: 0;
+            border-radius: 12px;
+            padding: 10px;
+        }
+
+        .pipeline-figure img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+            background: #ffffff;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .pipeline-caption {
+            margin-top: 18px;
+            color: var(--text-main);
+            font-size: 0.98rem;
+            line-height: 1.8;
+        }
+
+        .pipeline-caption p {
+            margin: 0 0 12px 0;
+        }
+
+        .pipeline-caption p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Citations */
+        .citations { margin-top: 80px; border-top: 1px solid var(--border-subtle); padding-top: 30px; color: var(--text-muted); font-size: 0.85rem; }
+        .citations p { margin: 8px 0; }
+        .citations a { color: var(--accent); text-decoration: none; }
+        .citations a:hover { text-decoration: underline; }
+
+        @media (max-width: 900px) {
+            .video-grid { grid-template-columns: 1fr; }
+            .nav-btn { width: 45px; height: 45px; font-size: 1.5rem; }
+            .toc-sidebar { display: none; }
+            .header-chip { font-size: 0.89rem; padding: 9px 14px; }
+            .header-chip svg { width: 16px; height: 16px; }
+            .abstract-card { padding: 22px 20px; }
+            .pipeline-card { padding: 18px; }
+        }
+
+        /* --- Section Headers --- */
+        .section-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 80px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .section-heading h2 {
+            margin: 0;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .section-caption {
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin: -10px 0 30px 0;
+            max-width: 900px;
+        }
+
+        .full-dataset-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(56, 189, 248, 0.05);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .full-dataset-btn:hover {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: var(--accent);
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        /* --- Comparison Grid --- */
+        .comparison-block {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255,255,255,0.03);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .comparison-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .comparison-block-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        .methods-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .method-card {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .method-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .method-label.ours { color: var(--accent); }
+        .method-label.gt { color: #4ade80; /* Tailwind green-400 */ }
+
+        .method-card video {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+            border-radius: 8px;
+            background: #000;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .section-controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .ctrl-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-main);
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .ctrl-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* --- Text-to-4D Section --- */
+        .t4d-carousel-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 16px;
+        }
+
+        .t4d-card {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex-grow: 1;
+        }
+
+        .t4d-card-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: var(--text-main);
+            margin: 0;
+            text-align: center;
+            font-style: italic;
+        }
+
+        .t4d-video-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .t4d-video-wrapper video {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .t4d-video-wrapper .t4d-vid-clean { z-index: 1; }
+        .t4d-video-wrapper .t4d-vid-traj  { z-index: 2; opacity: 1; pointer-events: auto; }
+
+        .t4d-toggle-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .t4d-nav-dots {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 40px;
+        }
+
+        /* --- Training video row inside comparison blocks --- */
+        .training-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .training-video-wrap {
+            position: relative;
+            width: 280px;
+            flex-shrink: 0;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+            border: 1px solid rgba(255,255,255,0.05);
+            aspect-ratio: 16 / 9;
+        }
+        .training-video-wrap video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .training-video-wrap .train-vid-prescan {
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 2;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .training-video-wrap .train-vid-dyn {
+            position: relative;
+            z-index: 1;
+        }
+        .training-meta {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            gap: 10px;
+            padding-bottom: 6px;
+        }
+        .training-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-main);
+        }
+        .prescan-toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .bibtex-box {
+            position: relative;
+            margin-top: 45px;
+            padding: 18px 18px 14px 18px;
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+        }
+
+        .bibtex-title {
+            margin: 0 0 10px 0;
+            font-size: 0.92rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 700;
+        }
+
+        .bibtex-content {
+            margin: 0;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            color: #dbeafe;
+            font-size: 0.9rem;
+            line-height: 1.55;
+            white-space: pre-wrap;
+        }
+
+        .copy-bibtex-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+            background: rgba(56, 189, 248, 0.08);
+            color: var(--accent);
+            cursor: pointer;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .copy-bibtex-btn:hover {
+            background: rgba(56, 189, 248, 0.16);
+            border-color: var(--accent);
+        }
+
+        .copy-bibtex-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .back-to-top-btn {
+            position: fixed;
+            right: 20px;
+            bottom: 24px;
+            z-index: 220;
+            border: 1px solid var(--border-subtle);
+            background: rgba(56, 189, 248, 0.12);
+            color: var(--accent);
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+            opacity: 0;
+            transform: translateY(8px);
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+        }
+        .back-to-top-btn.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .back-to-top-btn:hover {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="page-layout">
+
+    <nav class="toc-sidebar" id="toc-sidebar">
+        <p class="toc-title">Contents</p>
+        <ul class="toc-list">
+            <li><a href="#section-drops" onclick="scrollToSection('section-drops', this); return false;">DRoPS Results</a></li>
+            <li><a href="#section-abstract" onclick="scrollToSection('section-abstract', this); return false;">Abstract</a></li>
+            <li><a href="#section-pipeline" onclick="scrollToSection('section-pipeline', this); return false;">Pipeline</a></li>
+            <li><a href="#section-panoptic" onclick="scrollToSection('section-panoptic', this); return false;">Panoptic Studio</a></li>
+            <li><a href="#section-truebones" onclick="scrollToSection('section-truebones', this); return false;">TrueBones Results</a></li>
+            <li><a href="#section-itw" onclick="scrollToSection('section-itw', this); return false;">In-The-Wild</a></li>
+            <li><a href="#section-ablations" onclick="scrollToSection('section-ablations', this); return false;">Ablations</a></li>
+            <li><a href="#section-tracking" onclick="scrollToSection('section-tracking', this); return false;">3D Tracking</a></li>
+            <li><a href="#section-t4d" onclick="scrollToSection('section-t4d', this); return false;">Text-to-4D</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <div class="header-section">
+            <h1 style="font-weight: 1">DRoPS: Dynamic 3D Reconstruction of Pre-scanned Objects</h1>
+            
+            <div class="authors">
+                <span class="author-block"><a href="https://tnarek.github.io/" target="_blank" rel="noopener noreferrer">Narek Tumanyan</a><sup>1,2</sup></span>
+                <span class="author-block"><a href="https://scholar.google.com/citations?user=484sccEAAAAJ" target="_blank" rel="noopener noreferrer">Samuel Rota Bulò</a><sup>2</sup></span>
+                <span class="author-block"><a href="https://rozumden.github.io/" target="_blank" rel="noopener noreferrer">Denis Rozumny</a><sup>2</sup></span>
+                <span class="author-block"><a href="https://www.linkedin.com/in/lorenzoporzi" target="_blank" rel="noopener noreferrer">Lorenzo Porzi</a><sup>2</sup></span><br>
+                <span class="author-block"><a href="https://adamharley.com/" target="_blank" rel="noopener noreferrer">Adam Harley</a><sup>2</sup></span>
+                <span class="author-block"><a href="https://www.weizmann.ac.il/math/dekel/" target="_blank" rel="noopener noreferrer">Tali Dekel</a><sup>1</sup></span>
+                <span class="author-block"><a href="https://www.linkedin.com/in/peter-kontschieder-2a6410134" target="_blank" rel="noopener noreferrer">Peter Kontschieder</a><sup>2</sup></span>
+                <span class="author-block"><a href="https://x.com/jonathonluiten?lang=en" target="_blank" rel="noopener noreferrer">Jonathon Luiten</a><sup>2</sup></span>
+            </div>
+            
+            <div class="affiliations">
+                <span class="affil-block"><sup>1</sup>Weizmann Institute of Science</span>
+                <span class="affil-block"><sup>2</sup>Meta Reality Labs</span>
+            </div>
+
+            <div class="header-chips">
+                <a class="header-chip" href="./assets/paper.pdf" target="_blank" rel="noopener noreferrer">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <path d="M8 13h8M8 17h5"/>
+                    </svg>
+                    <span>Paper</span>
+                </a>
+                <a class="header-chip" href="#" target="_blank" rel="noopener noreferrer">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="4" y1="4" x2="20" y2="20"/>
+                        <line x1="20" y1="4" x2="4" y2="20"/>
+                        <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+                    </svg>
+                    <span>ArXiv</span>
+                </a>
+                <span class="header-chip header-chip-disabled" aria-disabled="true">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.7.5.1.68-.22.68-.49 0-.24-.01-1.04-.01-1.89-2.78.62-3.37-1.2-3.37-1.2-.46-1.2-1.11-1.52-1.11-1.52-.91-.64.07-.63.07-.63 1 .08 1.54 1.05 1.54 1.05.9 1.58 2.35 1.12 2.92.86.09-.67.35-1.12.64-1.38-2.22-.26-4.56-1.15-4.56-5.1 0-1.13.39-2.05 1.03-2.77-.1-.26-.45-1.31.1-2.73 0 0 .84-.27 2.75 1.05A9.22 9.22 0 0 1 12 6.79c.85 0 1.7.12 2.5.36 1.9-1.32 2.74-1.05 2.74-1.05.55 1.42.2 2.47.1 2.73.64.72 1.03 1.64 1.03 2.77 0 3.97-2.34 4.84-4.58 5.1.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.59.69.49A10.25 10.25 0 0 0 22 12.23C22 6.58 17.52 2 12 2z"/>
+                    </svg>
+                    <span>Code <span class="chip-soon">(coming soon)</span></span>
+                </span>
+            </div>
+        </div>
+
+        <div id="section-drops" class="carousel-wrapper">
+            <button class="nav-btn" onclick="prevDemo()">&#10094;</button>
+            
+            <div class="showcase-card" id="showcase-card">
+                <h3 class="demo-title" id="demo-title">Loading...</h3>
+                
+                <div class="video-grid">
+                    <div class="video-col">
+                        <div class="col-header">
+                            <h4>Input Video</h4>
+                        </div>
+                        <div class="video-container">
+                            <video id="vid-input" controls loop muted playsinline></video>
+                        </div>
+                    </div>
+
+                    <div class="video-col">
+                        <div class="col-header">
+                            <h4>Our Dynamic 3D Reconstruction</h4>
+                            <div class="toggle-container">
+                                <span>Trajectories</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="traj-toggle" onchange="toggleTraj()" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="video-container stacked-videos">
+                            <video id="vid-clean" controls loop muted playsinline></video>
+                            <video id="vid-traj" controls loop muted playsinline></video>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="nav-btn" onclick="nextDemo()">&#10095;</button>
+        </div>
+
+        <div class="nav-dots" id="nav-dots"></div>
+
+        <div id="section-abstract" class="section-heading">
+            <h2>Abstract</h2>
+        </div>
+        <div class="abstract-card">
+            <p>Dynamic scene reconstruction from casual videos has seen recent remarkable progress. Numerous approaches have attempted to overcome the ill-posedness of the task by distilling priors from 2D foundational models and by imposing hand-crafted regularization on the optimized motion. However, these methods struggle to reconstruct scenes from extreme novel viewpoints, especially when highly articulated motions are present. In this paper, we present DRoPS, a novel approach that leverages a static pre-scan of the dynamic object as an explicit geometric and appearance prior. While existing state-of-the-art methods fail to fully exploit the pre-scan, DRoPS leverages our novel setup to effectively constrain the solution space and ensure geometrical consistency throughout the sequence. The core of our novelty is twofold: first, we establish a grid-structured and surface-aligned model by organizing Gaussian primitives into pixel grids anchored to the object surface. Second, by leveraging the grid structure of our primitives, we parameterize motion using a CNN conditioned on those grids, injecting strong implicit regularization and correlating the motion of nearby points. Extensive experiments demonstrate that our method significantly outperforms the current state of the art in rendering quality and 3D tracking accuracy.</p>
+        </div>
+
+        <div id="section-pipeline" class="section-heading">
+            <h2>Pipeline</h2>
+        </div>
+        <div class="pipeline-card">
+            <figure class="pipeline-figure">
+                <img src="assets/pipeline.png" alt="DRoPS pipeline overview showing structured surface-aligned canonical Gaussians and CNN-based dynamic modeling.">
+                <figcaption class="pipeline-caption">
+                    <p><strong>DRoPS Overview.</strong> (a) We organize our canonical Gaussians into structured pixel grids that reside on virtual cameras surrounding the object, each pixel encoding the parameters of its back-projected 3D Gaussian. (b) To reconstruct the dynamic sequence, we model the object deformation with <br> <b>Deep Motion Prior (DMP)</b>, a CNN that maps canonical positions and timestep encodings to 6-DOF motion parameters.</p>
+                    <p>By utilizing the Deep Motion Prior, DRoPS exploits the spatial inductive bias of convolutional networks to introduce strong regularization to motion modeling and to encourage coherent local motion without relying as heavily on hand-crafted regularization. This results in a geometrically consistent, complete dynamic 3D representation, supporting high-quality novel-view rendering and accurate long-range 3D point tracking, even for highly articulated motions.</p>
+                </figcaption>
+            </figure>
+        </div>
+
+        <div class="links-grid">
+            <a href="#section-panoptic" class="dataset-link">
+                Panoptic Studio Results
+                <span class="desc">View video results and comparisons</span>
+            </a>
+            <a href="#section-truebones" class="dataset-link">
+                Truebones Results
+                <span class="desc">View video results and comparisons</span>
+            </a>
+            <a href="#section-ablations" class="dataset-link">
+                Ablation Studies
+                <span class="desc">View ablation results alongside ours</span>
+            </a>
+        </div>
+
+        <div id="section-panoptic" class="section-heading">
+            <h2>Panoptic Studio Results</h2>
+            <a href="panoptic/index.html" class="full-dataset-btn">Complete dataset comparison &#8599;</a>
+        </div>
+        <p class="section-caption">
+            Evaluation on the CMU Panoptic Studio dataset <a href="#cite-4">[4]</a>, which features real-world multi-view captures of complex human motions such as juggling, softball, and tennis. We use a single camera view for training and evaluate novel view synthesis on 30 held-out cameras at extreme viewing angles.
+            We compare against state-of-the-art optimization-based (HiMoR <a href="#cite-1">[1]</a>, OriGS <a href="#cite-2">[2]</a>) and generative (Cog-NVS <a href="#cite-3">[3]</a>) approaches.
+            DRoPS significantly outperforms the baselines in maintaining a consistent object geometry and sharp appearance, while accurately modeling the scene dynamics.
+            <br><br> See <a href="panoptic/index.html" style="color: var(--accent);">more examples here</a>.
+        </p>
+
+        <div id="panoptic-section">
+
+        <!-- <div class="comparison-block">
+            <div class="comparison-block-header">
+                <p class="comparison-block-title">Softball &mdash; Test Camera 1</p>
+                <div class="section-controls">
+                    <button class="ctrl-btn" onclick="rowPlayAll(this)">&#9654; Play All</button>
+                    <button class="ctrl-btn" onclick="rowPauseAll(this)">&#9646;&#9646; Pause</button>
+                    <button class="ctrl-btn" onclick="rowResetAll(this)">&#8635; Reset</button>
+                </div>
+            </div>
+            
+            <div class="training-row">
+                <div class="training-video-wrap">
+                    <video class="train-vid-dyn lazy-vid" controls data-src="panoptic/softball/train_dyn_only.mp4" muted loop playsinline preload="none"></video>
+                    <video class="train-vid-prescan lazy-vid" controls data-src="panoptic/softball/train.mp4" muted loop playsinline preload="none"></video>
+                </div>
+                <div class="training-meta">
+                    <div class="training-label">Training Video</div>
+                    <div class="prescan-toggle-row">
+                        <span>Show Pre-scan</span>
+                        <label class="switch">
+                            <input type="checkbox" id="prescan-toggle-softball-c1" onchange="togglePrescan(this)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="methods-grid">
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_0/gt.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label gt">Ground Truth</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_0/ours.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label ours">Ours</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_0/himor.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">HiMoR</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_0/origs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">OriGS</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_0/cog-nvs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">Cog-NVS</div>
+                </div>
+            </div>
+        </div> -->
+
+        <div class="comparison-block">
+            <div class="comparison-block-header">
+                <!-- <p class="comparison-block-title">Softball &mdash; Test Camera 2</p> -->
+                <p class="comparison-block-title">Softball</p>
+                <div class="section-controls">
+                    <button class="ctrl-btn" onclick="rowPlayAll(this)">&#9654; Play All</button>
+                    <button class="ctrl-btn" onclick="rowPauseAll(this)">&#9646;&#9646; Pause</button>
+                    <button class="ctrl-btn" onclick="rowResetAll(this)">&#8635; Reset</button>
+                </div>
+            </div>
+            
+            <div class="training-row">
+                <div class="training-video-wrap">
+                    <video class="train-vid-dyn lazy-vid" controls data-src="panoptic/softball/train_dyn_only.mp4" muted loop playsinline preload="none"></video>
+                    <video class="train-vid-prescan lazy-vid" controls data-src="panoptic/softball/train.mp4" muted loop playsinline preload="none"></video>
+                </div>
+                <div class="training-meta">
+                    <div class="training-label">Training Video</div>
+                    <div class="prescan-toggle-row">
+                        <span>Show Pre-scan</span>
+                        <label class="switch">
+                            <input type="checkbox" id="prescan-toggle-softball-c2" onchange="togglePrescan(this)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="methods-grid">
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_2/gt.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label gt">Ground Truth</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_2/ours.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label ours">Ours</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_2/himor.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">HiMoR</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_2/origs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">OriGS</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_2/cog-nvs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">Cog-NVS</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Juggle Cam 1 -->
+        <div class="comparison-block">
+            <div class="comparison-block-header">
+                <!-- <p class="comparison-block-title">Juggle &mdash; Test Camera 1</p> -->
+                <p class="comparison-block-title">Juggle</p>
+                <div class="section-controls">
+                    <button class="ctrl-btn" onclick="rowPlayAll(this)">&#9654; Play All</button>
+                    <button class="ctrl-btn" onclick="rowPauseAll(this)">&#9646;&#9646; Pause</button>
+                    <button class="ctrl-btn" onclick="rowResetAll(this)">&#8635; Reset</button>
+                </div>
+            </div>
+            
+            <div class="training-row">
+                <div class="training-video-wrap">
+                    <video class="train-vid-dyn lazy-vid" controls data-src="panoptic/juggle/train_dyn_only.mp4" muted loop playsinline preload="none"></video>
+                    <video class="train-vid-prescan lazy-vid" controls data-src="panoptic/juggle/train.mp4" muted loop playsinline preload="none"></video>
+                </div>
+                <div class="training-meta">
+                    <div class="training-label">Training Video</div>
+                    <div class="prescan-toggle-row">
+                        <span>Show Pre-scan</span>
+                        <label class="switch">
+                            <input type="checkbox" id="prescan-toggle-juggle-c1" onchange="togglePrescan(this)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="methods-grid">
+                <div class="method-card">
+                    <video data-src="panoptic/juggle/eval/cam_1/gt.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label gt">Ground Truth</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/juggle/eval/cam_1/ours.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label ours">Ours</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/juggle/eval/cam_1/himor.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">HiMoR</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/juggle/eval/cam_1/origs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">OriGS</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/juggle/eval/cam_1/cog-nvs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">Cog-NVS</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Juggle Cam 2 -->
+        <!-- <div class="comparison-block">
+            <div class="comparison-block-header">
+                <p class="comparison-block-title">Juggle &mdash; Test Camera 2</p>
+                <div class="section-controls">
+                    <button class="ctrl-btn" onclick="rowPlayAll(this)">&#9654; Play All</button>
+                    <button class="ctrl-btn" onclick="rowPauseAll(this)">&#9646;&#9646; Pause All</button>
+                    <button class="ctrl-btn" onclick="rowResetAll(this)">&#8635; Reset All</button>
+                </div>
+            </div>
+            
+            <div class="training-row">
+                <div class="training-video-wrap">
+                    <video class="train-vid-dyn lazy-vid" controls data-src="panoptic/juggle/train_dyn_only.mp4" muted loop playsinline preload="none"></video>
+                    <video class="train-vid-prescan lazy-vid" controls data-src="panoptic/juggle/train.mp4" muted loop playsinline preload="none"></video>
+                </div>
+                <div class="training-meta">
+                    <div class="training-label">Training Video</div>
+                    <div class="prescan-toggle-row">
+                        <span>Show Pre-scan</span>
+                        <label class="switch">
+                            <input type="checkbox" id="prescan-toggle-juggle-c2" onchange="togglePrescan(this)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+<div class="methods-grid">
+                <div class="method-card">
+                    <video data-src="panoptic/juggle/eval/cam_2/gt.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label gt">Ground Truth</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/juggle/eval/cam_2/ours.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label ours">Ours</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/juggle/eval/cam_2/himor.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">HiMoR</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/juggle/eval/cam_2/origs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">OriGS</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/juggle/eval/cam_2/cog-nvs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">Cog-NVS</div>
+                </div>
+            </div>
+        </div> -->
+
+        </div> <!-- End of Panoptic Section -->
+        
+        
+        <div id="section-truebones" class="section-heading">
+            <h2>TrueBones Results</h2>
+            <a href="truebones/index.html" class="full-dataset-btn">Complete dataset comparison &#8599;</a>
+        </div>
+        <p class="section-caption">
+            Evaluation on our synthetic dynamic animals dataset generated using TrueBones <a href="#cite-5">[5]</a> animated characters. Since the data is synthetic, we have access to ground-truth depth and camera parameters, allowing us to validate our approach under controlled conditions.
+            We compare against state-of-the-art optimization-based (HiMoR <a href="#cite-1">[1]</a>, OriGS <a href="#cite-2">[2]</a>) and generative (Cog-NVS <a href="#cite-3">[3]</a>) approaches.
+            DRoPS significantly outperforms the baselines in maintaining a consistent object geometry and sharp appearance, while accurately modeling the scene dynamics.
+            <br><br> See <a href="truebones/index.html" style="color: var(--accent);">more examples here</a>.
+        </p>
+
+        <div id="truebones-section">
+
+        <!-- Camel run -->
+        <div class="comparison-block">
+            <div class="comparison-block-header">
+                <!-- <p class="comparison-block-title">Camel Run &mdash; Test Camera 1</p> -->
+                <p class="comparison-block-title">Camel Run</p>
+                <div class="section-controls">
+                    <button class="ctrl-btn" onclick="rowPlayAll(this)">&#9654; Play All</button>
+                    <button class="ctrl-btn" onclick="rowPauseAll(this)">&#9646;&#9646; Pause</button>
+                    <button class="ctrl-btn" onclick="rowResetAll(this)">&#8635; Reset</button>
+                </div>
+            </div>
+            
+            <div class="training-row">
+                <div class="training-video-wrap">
+                    <video class="train-vid-dyn lazy-vid" controls data-src="truebones/camel-run/train_dyn_only.mp4" muted loop playsinline preload="none"></video>
+                    <video class="train-vid-prescan lazy-vid" controls data-src="truebones/camel-run/train.mp4" muted loop playsinline preload="none"></video>
+                </div>
+                <div class="training-meta">
+                    <div class="training-label">Training Video</div>
+                    <div class="prescan-toggle-row">
+                        <span>Show Pre-scan</span>
+                        <label class="switch">
+                            <input type="checkbox" id="prescan-toggle-camel-c1" onchange="togglePrescan(this)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="methods-grid">
+                <div class="method-card">
+                    <video data-src="truebones/camel-run/eval/cam_1/gt.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label gt">Ground Truth</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="truebones/camel-run/eval/cam_1/ours.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label ours">Ours</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="truebones/camel-run/eval/cam_1/himor.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">HiMoR</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="truebones/camel-run/eval/cam_1/origs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">OriGS</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="truebones/camel-run/eval/cam_1/cog-nvs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">Cog-NVS</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bat Attack Cam 2 -->
+        <div class="comparison-block">
+            <div class="comparison-block-header">
+                <!-- <p class="comparison-block-title">Bat Attack &mdash; Test Camera 2</p> -->
+                <p class="comparison-block-title">Bat Attack</p>
+                <div class="section-controls">
+                    <button class="ctrl-btn" onclick="rowPlayAll(this)">&#9654; Play All</button>
+                    <button class="ctrl-btn" onclick="rowPauseAll(this)">&#9646;&#9646; Pause All</button>
+                    <button class="ctrl-btn" onclick="rowResetAll(this)">&#8635; Reset All</button>
+                </div>
+            </div>
+            
+            <div class="training-row">
+                <div class="training-video-wrap">
+                    <video class="train-vid-dyn lazy-vid" controls data-src="truebones/bat-attackbite/train_dyn_only.mp4" muted loop playsinline preload="none"></video>
+                    <video class="train-vid-prescan lazy-vid" controls data-src="truebones/bat-attackbite/train.mp4" muted loop playsinline preload="none"></video>
+                </div>
+                <div class="training-meta">
+                    <div class="training-label">Training Video</div>
+                    <div class="prescan-toggle-row">
+                        <span>Show Pre-scan</span>
+                        <label class="switch">
+                            <input type="checkbox" id="prescan-toggle-bear-c2" onchange="togglePrescan(this)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+<div class="methods-grid">
+                <div class="method-card">
+                    <video data-src="truebones/bat-attackbite/eval/cam_2/gt.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label gt">Ground Truth</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="truebones/bat-attackbite/eval/cam_2/ours.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label ours">Ours</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="truebones/bat-attackbite/eval/cam_2/himor.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">HiMoR</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="truebones/bat-attackbite/eval/cam_2/origs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">OriGS</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="truebones/bat-attackbite/eval/cam_2/cog-nvs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">Cog-NVS</div>
+                </div>
+            </div>
+        </div>
+
+        </div> <!-- End of TrueBones Section -->
+        
+        <div id="section-itw" class="section-heading">
+            <h2>In-The-Wild Videos</h2>
+        </div>
+        <p class="section-caption">
+            DRoPS can operate on casual, fully monocular videos where no multi-view pre-scan is available.
+            Instead, the pre-scan is generated from the first video frame using an off-the-shelf image-to-3D model.
+            As shown below, DRoPS achieves high-quality, complete dynamic 3D reconstruction even in this challenging in-the-wild setting.
+            Videos are taken from the DAVIS dataset <a href="#cite-6">[6]</a> and the internet.
+        </p>
+
+        <div class="carousel-wrapper" id="itw-carousel-wrapper">
+            <button class="nav-btn" onclick="prevITW()">&#10094;</button>
+
+            <div class="showcase-card" id="itw-card">
+                <h3 class="demo-title" id="itw-title">Loading...</h3>
+                <div class="video-grid">
+                    <div class="video-col">
+                        <div class="col-header">
+                            <h4>Input Video</h4>
+                        </div>
+                        <div class="video-container">
+                            <video id="itw-vid-input" controls loop muted playsinline></video>
+                        </div>
+                    </div>
+                    <div class="video-col">
+                        <div class="col-header">
+                            <h4>Our Dynamic 3D Reconstruction</h4>
+                            <div class="toggle-container">
+                                <span>Trajectories</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="itw-traj-toggle" onchange="toggleITWTraj()" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="video-container stacked-videos">
+                            <video id="itw-vid-clean" controls loop muted playsinline></video>
+                            <video id="itw-vid-traj" controls loop muted playsinline></video>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="nav-btn" onclick="nextITW()">&#10095;</button>
+        </div>
+
+        <div class="nav-dots" id="itw-nav-dots"></div>
+
+        <div id="section-ablations" class="section-heading">
+            <h2>Ablations</h2>
+            <a href="panoptic/ablations.html" class="full-dataset-btn">Full ablation study &#8599;</a>
+        </div>
+        <p class="section-caption">
+            We ablate the key design choices of our method on the CMU Panoptic Studio dataset <a href="#cite-4">[4]</a>.
+            Each row shows the result of removing one component on a held-out test camera. Removing any key component significantly degrades reconstruction quality,
+            highlighting their contribution.
+            <br><br>
+            See <a href="panoptic/ablations.html" style="color: var(--accent);">the full ablation study here</a>.
+        </p>
+
+        <div class="comparison-block">
+            <div class="comparison-block-header">
+                <p class="comparison-block-title">Softball &mdash; Test Camera 1</p>
+                <div class="section-controls">
+                    <button class="ctrl-btn" onclick="rowPlayAll(this)">&#9654; Play All</button>
+                    <button class="ctrl-btn" onclick="rowPauseAll(this)">&#9646;&#9646; Pause</button>
+                    <button class="ctrl-btn" onclick="rowResetAll(this)">&#8635; Reset</button>
+                </div>
+            </div>
+            <div class="methods-grid">
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_1/ours.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label ours">Ours (Full)</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_1/abl_wo_cnn_mlp.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">w/o CNN, w/ MLP</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_1/abl_wo_cnn.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">w/o CNN</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_1/abl_wo_coarse_iso.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">w/o Coarse Iso. Loss</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_1/abl_wo_dense_iso.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">w/o Dense Iso. Loss</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="panoptic/softball/eval/cam_1/abl_wo_rigid.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">w/o Rigid Loss</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="section-tracking" class="section-heading">
+            <h2>Long-Range 3D Tracking</h2>
+        </div>
+        <p class="section-caption">
+            DRoPS produces an explicit dynamic 3D representation from which long-range 3D point trajectories emerge naturally.
+            We compare our 3D tracking against optimization-based baselines HiMoR <a href="#cite-1">[1]</a> and OriGS <a href="#cite-2">[2]</a>,
+            which also incorporate explcit dynamic 3D representations with deforming Gaussian splats.
+            The ground-truth positions are visualized as crosses, the predictions as circles, and the lines connecting to them show the error.
+            <br>
+            DRoPS achieves significantly more accurate long-range 3D tracking than the baselines, while maintaining a consistent object geometry and sharp appearance.
+            See our paper for quantitative evaluation and more details.
+        </p>
+
+        <!-- Softball -->
+        <div class="comparison-block">
+            <div class="comparison-block-header">
+                <p class="comparison-block-title">Softball Tracking</p>
+                <div class="section-controls">
+                    <button class="ctrl-btn" onclick="rowPlayAll(this)">&#9654; Play All</button>
+                    <button class="ctrl-btn" onclick="rowPauseAll(this)">&#9646;&#9646; Pause</button>
+                    <button class="ctrl-btn" onclick="rowResetAll(this)">&#8635; Reset</button>
+                </div>
+            </div>
+            <div class="methods-grid">
+                <div class="method-card">
+                    <video data-src="tracking/softball-ours.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label ours">Ours</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="tracking/softball-himor.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">HiMoR</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="tracking/softball-origs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">OriGS</div>
+                </div>
+            </div>
+        </div>
+        <!-- Juggle -->
+        <div class="comparison-block">
+            <div class="comparison-block-header">
+                <p class="comparison-block-title">Juggle</p>
+                <div class="section-controls">
+                    <button class="ctrl-btn" onclick="rowPlayAll(this)">&#9654; Play All</button>
+                    <button class="ctrl-btn" onclick="rowPauseAll(this)">&#9646;&#9646; Pause All</button>
+                    <button class="ctrl-btn" onclick="rowResetAll(this)">&#8635; Reset All</button>
+                </div>
+            </div>
+            <div class="methods-grid">
+                <div class="method-card">
+                    <video data-src="tracking/juggle-ours.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label ours">Ours</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="tracking/juggle-himor.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">HiMoR</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="tracking/juggle-origs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">OriGS</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coyote -->
+        <div class="comparison-block">
+            <div class="comparison-block-header">
+                <p class="comparison-block-title">Coyote</p>
+                <div class="section-controls">
+                    <button class="ctrl-btn" onclick="rowPlayAll(this)">&#9654; Play All</button>
+                    <button class="ctrl-btn" onclick="rowPauseAll(this)">&#9646;&#9646; Pause All</button>
+                    <button class="ctrl-btn" onclick="rowResetAll(this)">&#8635; Reset All</button>
+                </div>
+            </div>
+            <div class="methods-grid">
+                <div class="method-card">
+                    <video data-src="tracking/coyote-ours.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label ours">Ours</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="tracking/coyote-himor.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">HiMoR</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="tracking/coyote-origs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">OriGS</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Camel Run -->
+        <div class="comparison-block">
+            <div class="comparison-block-header">
+                <p class="comparison-block-title">Camel Run</p>
+                <div class="section-controls">
+                    <button class="ctrl-btn" onclick="rowPlayAll(this)">&#9654; Play All</button>
+                    <button class="ctrl-btn" onclick="rowPauseAll(this)">&#9646;&#9646; Pause All</button>
+                    <button class="ctrl-btn" onclick="rowResetAll(this)">&#8635; Reset All</button>
+                </div>
+            </div>
+            <div class="methods-grid">
+                <div class="method-card">
+                    <video data-src="tracking/camel-ours.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label ours">Ours</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="tracking/camel-himor.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">HiMoR</div>
+                </div>
+                <div class="method-card">
+                    <video data-src="tracking/camel-origs.mp4" controls muted loop playsinline preload="none" class="lazy-vid"></video>
+                    <div class="method-label">OriGS</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="section-t4d" class="section-heading">
+            <h2>Text-to-4D Application</h2>
+        </div>
+        <p class="section-caption">DRoPS enables Text-to-4D generation: given a text prompt describing a dynamic subject, we first generate a video using an off-the-shelf text-to-video model,
+            then apply DRoPS with the in-the-wild pipeline for dynamic 3D reconstruction. The colored lines visualize 3D point trajectories emerging from our representation.</p>
+
+        <div class="carousel-wrapper t4d-carousel-wrapper">
+            <button class="nav-btn" onclick="prevT4D()">&#10094;</button>
+
+            <div class="t4d-card" id="t4d-card">
+                <p class="t4d-card-title" id="t4d-title">Loading...</p>
+                <div class="t4d-video-wrapper" id="t4d-wrapper">
+                    <video class="t4d-vid-clean" id="t4d-vid-clean" controls loop muted playsinline></video>
+                    <video class="t4d-vid-traj"  id="t4d-vid-traj"  controls loop muted playsinline></video>
+                </div>
+                <div class="t4d-toggle-row">
+                    <div class="toggle-container">
+                        <span>Trajectories</span>
+                        <label class="switch">
+                            <input type="checkbox" id="t4d-traj-toggle" onchange="toggleT4DCarousel()" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <button class="nav-btn" onclick="nextT4D()">&#10095;</button>
+        </div>
+
+        <div class="t4d-nav-dots" id="t4d-nav-dots"></div>
+
+        <div class="bibtex-box">
+            <button class="copy-bibtex-btn" type="button" aria-label="Copy BibTeX" onclick="copyBibtex(this)">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+            </button>
+            <p class="bibtex-title">BibTeX</p>
+            <pre class="bibtex-content" id="bibtex-entry">
+@inproceedings{drops2026,
+    author = {Narek Tumanyan, Samuel Rota Bulò, Denis Rozumny, Lorenzo Porzi, Adam Harley, Tali Dekel, Peter Kontschieder, Jonathon Luiten},
+    title = {DRoPS: Dynamic 3D Reconstruction of Pre-scanned Objects},
+    year = {2026},
+}
+        </pre>
+        </div>
+
+        <div class="citations">
+            <p id="cite-1">[1] Yiming Liang, Tianhan Xu, Yuta Kikuchi. HiMoR: Monocular Deformable Gaussian Reconstruction with Hierarchical Motion Representation, CVPR 2025</p>
+            <p id="cite-2">[2] Junyi Wu, Jiachen Tao, Haoxuan Wang, Gaowen Liu, Ramana Rao Kompella, Yan Yan. Orientation-anchored Hyper-Gaussian for 4D Reconstruction from Casual Videos, NeurIPS 2025</p>
+            <p id="cite-3">[3] Kaihua Chen*, Tarasha Khurana*, Deva Ramanan. Reconstruct, Inpaint, Test-Time Finetune: Dynamic Novel-view Synthesis from Monocular Videos, NeurIPS 2025</p>
+            <p id="cite-4">[4] Hanbyul Joo, Hao Liu, Lei Tan, Lin Gui, Bart Nabbe, Iain Matthews, Takeo Kanade, Shohei Nobuhara, Yaser Sheikh. Panoptic Studio: A Massively Multiview System for Social Motion Capture, ICCV 2015</p>
+            <p id="cite-5">[5] TrueBones. <a href="https://www.truebones.com" target="_blank">truebones.com</a></p>
+            <p id="cite-6">[6] Jordi Pont-Tuset, Federico Perazzi, Sergi Caelles, Pablo Arbel&agrave;ez, Alexander Sorkine-Hornung, Luc Van Gool. The 2017 DAVIS Challenge on Video Object Segmentation, arXiv:1704.00675, 2017</p>
+        </div>
+
+    </div></div>
+    <button id="back-to-top-btn" class="back-to-top-btn" type="button" aria-label="Back to top">Back to Top</button>
+    <script>
+        // JavaScript logic remains exactly the same as the previous version
+        const demos = [
+            { id: "davis-kangaroo", title: "Kangaroo", input: "davis-kangaroo.mp4", base: "davis-kangaroo_white_bg.mp4", traj: "davis-kangaroo_with_trajs_white_bg.mp4" },
+            { id: "camel-run",      title: "Camel",    input: "camel-run.mp4",      base: "camel-run_white_bg.mp4",      traj: "camel-run_with_trajs_white_bg.mp4" },
+            { id: "davis-cows",     title: "Cows",     input: "davis-cows.mp4",     base: "davis-cows_white_bg.mp4",     traj: "davis-cows_with_trajs_white_bg.mp4" },
+            { id: "davis-hike",     title: "Hike",     input: "davis-hike.mp4",     base: "davis-hike_white_bg.mp4",     traj: "davis-hike_with_trajs_white_bg.mp4" },
+            { id: "davis-flamingo", title: "Flamingo", input: "davis-flamingo.mp4", base: "davis-flamingo_white_bg.mp4", traj: "davis-flamingo_with_trajs_white_bg.mp4" },
+            { id: "davis-car-roundabout",     title: "Car",      input: "davis-car-roundabout.mp4",     base: "davis-car-roundabout_white_bg.mp4",     traj: "davis-car-roundabout_with_trajs_white_bg.mp4" },
+            { id: "davis-bear",     title: "Bear",      input: "davis-bear.mp4",     base: "davis-bear_white_bg.mp4",     traj: "davis-bear_with_trajs_white_bg.mp4" },
+            { id: "bat-attackbite", title: "Bat",      input: "bat-attackbite.mp4", base: "bat-attackbite_white_bg.mp4", traj: "bat-attackbite_with_trajs_white_bg.mp4" },
+            { id: "davis-rhino",     title: "Rhino",      input: "davis-rhino.mp4",     base: "davis-rhino_white_bg.mp4",     traj: "davis-rhino_with_trajs_white_bg.mp4" },
+            { id: "davis-camel",     title: "Camel",      input: "davis-camel.mp4",     base: "davis-camel_white_bg.mp4",     traj: "davis-camel_with_trajs_white_bg.mp4" },
+            { id: "coyote-walking", title: "Coyote",   input: "coyote-walking.mp4", base: "coyote-walking_white_bg.mp4", traj: "coyote-walking_with_trajs_white_bg.mp4" },
+        ];
+        const TOP_TEASER_PLAYBACK_SPEED = 0.8; // 1.0;
+
+        let currentIndex = 0;
+        const inputVid    = document.getElementById('vid-input');
+        const cleanVid    = document.getElementById('vid-clean');
+        const trajVid     = document.getElementById('vid-traj');
+        const titleEl     = document.getElementById('demo-title');
+        const dotsContainer = document.getElementById('nav-dots');
+        const toggleInput = document.getElementById('traj-toggle');
+        const showcaseCard = document.getElementById('showcase-card');
+
+        function applyTopTeaserPlaybackSpeed() {
+            inputVid.playbackRate = TOP_TEASER_PLAYBACK_SPEED;
+            cleanVid.playbackRate = TOP_TEASER_PLAYBACK_SPEED;
+            trajVid.playbackRate = TOP_TEASER_PLAYBACK_SPEED;
+        }
+
+        function init() {
+            demos.forEach((demo, idx) => {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.onclick = () => loadVideo(idx);
+                dotsContainer.appendChild(dot);
+            });
+            applyTopTeaserPlaybackSpeed();
+            setupVideoSync();
+            loadVideo(0);
+        }
+
+        function setupVideoSync() {
+            cleanVid.onplay   = () => { if (!toggleInput.checked) trajVid.play().catch(() => {}); };
+            cleanVid.onpause  = () => { if (!toggleInput.checked) trajVid.pause(); };
+            cleanVid.onseeked = () => { if (!toggleInput.checked) trajVid.currentTime = cleanVid.currentTime; };
+            trajVid.onplay    = () => { if (toggleInput.checked)  cleanVid.play().catch(() => {}); };
+            trajVid.onpause   = () => { if (toggleInput.checked)  cleanVid.pause(); };
+            trajVid.onseeked  = () => { if (toggleInput.checked)  cleanVid.currentTime = trajVid.currentTime; };
+        }
+
+        function loadVideo(index) {
+            currentIndex = index;
+            showcaseCard.style.opacity = '0.5';
+            setTimeout(() => {
+                inputVid.src = `demo-inputs/${demos[index].input}`;
+                cleanVid.src = `demos/${demos[index].base}`;
+                titleEl.innerText = demos[index].title;
+                document.querySelectorAll('.dot').forEach((dot, idx) => dot.classList.toggle('active', idx === index));
+                applyTopTeaserPlaybackSpeed();
+                inputVid.play().catch(() => {});
+                if (toggleInput.checked) {
+                    trajVid.src = `demos/${demos[index].traj}`;
+                    trajVid.load();
+                    trajVid.style.opacity = '1';
+                    trajVid.style.pointerEvents = 'auto';
+                    cleanVid.style.pointerEvents = 'none';
+                    applyTopTeaserPlaybackSpeed();
+                    trajVid.oncanplay = () => { trajVid.play().catch(() => {}); trajVid.oncanplay = null; };
+                } else {
+                    trajVid.src = '';
+                    trajVid.style.opacity = '0';
+                    trajVid.style.pointerEvents = 'none';
+                    cleanVid.style.pointerEvents = 'auto';
+                    applyTopTeaserPlaybackSpeed();
+                    cleanVid.play().catch(() => {});
+                }
+                showcaseCard.style.opacity = '1';
+            }, 200);
+        }
+
+        function prevDemo() { loadVideo((currentIndex - 1 + demos.length) % demos.length); }
+        function nextDemo() { loadVideo((currentIndex + 1) % demos.length); }
+
+        function toggleTraj() {
+            if (toggleInput.checked) {
+                if (!trajVid.src || trajVid.src === window.location.href) {
+                    trajVid.src = `demos/${demos[currentIndex].traj}`;
+                    trajVid.load();
+                }
+                trajVid.style.opacity = '1';
+                trajVid.style.pointerEvents = 'auto';
+                cleanVid.style.pointerEvents = 'none';
+                trajVid.currentTime = cleanVid.currentTime;
+                applyTopTeaserPlaybackSpeed();
+                if (!cleanVid.paused) trajVid.play().catch(() => {});
+            } else {
+                trajVid.style.opacity = '0';
+                trajVid.style.pointerEvents = 'none';
+                cleanVid.style.pointerEvents = 'auto';
+                cleanVid.currentTime = trajVid.currentTime;
+                applyTopTeaserPlaybackSpeed();
+                if (!trajVid.paused) cleanVid.play().catch(() => {});
+            }
+        }
+
+        // Lazy-loading helpers
+        function ensureVideoLoaded(video) {
+            if (!video.src && video.dataset.src) {
+                video.src = video.dataset.src;
+                video.load();
+            }
+        }
+
+        function initLazyVideos() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const v = entry.target;
+                        ensureVideoLoaded(v);
+                        if (v.closest('.training-video-wrap') && !v.classList.contains('train-vid-prescan')) {
+                            v.play().catch(() => {});
+                        }
+                        observer.unobserve(v);
+                    }
+                });
+            }, { rootMargin: '300px 0px' });
+
+            document.querySelectorAll('video.lazy-vid').forEach(v => observer.observe(v));
+        }
+
+        function rowVideos(btn) { return Array.from(btn.closest('.comparison-block').querySelectorAll('video.lazy-vid')); }
+        function rowPlayAll(btn)  { rowVideos(btn).forEach(v => { ensureVideoLoaded(v); v.play().catch(() => {}); }); }
+        function rowPauseAll(btn) { rowVideos(btn).forEach(v => v.pause()); }
+        function rowResetAll(btn) { rowVideos(btn).forEach(v => { v.pause(); v.currentTime = 0; }); }
+
+        function togglePrescan(checkbox) {
+            const wrap = checkbox.closest('.training-row').querySelector('.training-video-wrap');
+            const prescanVid = wrap.querySelector('.train-vid-prescan');
+            const dynVid     = wrap.querySelector('.train-vid-dyn');
+            if (checkbox.checked) {
+                ensureVideoLoaded(prescanVid);
+                prescanVid.style.opacity = '1';
+                prescanVid.style.pointerEvents = 'auto';
+                prescanVid.currentTime = dynVid.currentTime;
+                if (!dynVid.paused) prescanVid.play().catch(() => {});
+            } else {
+                prescanVid.style.opacity = '0';
+                prescanVid.style.pointerEvents = 'none';
+                ensureVideoLoaded(dynVid);
+                dynVid.currentTime = prescanVid.currentTime;
+                if (!prescanVid.paused) dynVid.play().catch(() => {});
+            }
+        }
+
+        // In-The-Wild carousel
+        const itwDemos = [
+            { title: "Kangaroo",      input: "davis-kangaroo.mp4",       base: "davis-kangaroo_white_bg.mp4",       traj: "davis-kangaroo_with_trajs_white_bg.mp4" },
+            { title: "Cows",          input: "davis-cows.mp4",           base: "davis-cows_white_bg.mp4",           traj: "davis-cows_with_trajs_white_bg.mp4" },
+            { title: "Hike",          input: "davis-hike.mp4",           base: "davis-hike_white_bg.mp4",           traj: "davis-hike_with_trajs_white_bg.mp4" },
+            { title: "Flamingo",      input: "davis-flamingo.mp4",       base: "davis-flamingo_white_bg.mp4",       traj: "davis-flamingo_with_trajs_white_bg.mp4" },
+            { title: "Car",           input: "davis-car-roundabout.mp4", base: "davis-car-roundabout_white_bg.mp4", traj: "davis-car-roundabout_with_trajs_white_bg.mp4" },
+            { title: "Bear",          input: "davis-bear.mp4",           base: "davis-bear_white_bg.mp4",           traj: "davis-bear_with_trajs_white_bg.mp4" },
+            { title: "Rhino",         input: "davis-rhino.mp4",          base: "davis-rhino_white_bg.mp4",          traj: "davis-rhino_with_trajs_white_bg.mp4" },
+            { title: "Camel",         input: "davis-camel.mp4",          base: "davis-camel_white_bg.mp4",          traj: "davis-camel_with_trajs_white_bg.mp4" },
+        ];
+
+        let itwIndex = 0;
+        const itwInputVid   = document.getElementById('itw-vid-input');
+        const itwCleanVid   = document.getElementById('itw-vid-clean');
+        const itwTrajVid    = document.getElementById('itw-vid-traj');
+        const itwTitleEl    = document.getElementById('itw-title');
+        const itwDotsEl     = document.getElementById('itw-nav-dots');
+        const itwToggleInput = document.getElementById('itw-traj-toggle');
+        const itwCard       = document.getElementById('itw-card');
+
+        function initITW() {
+            itwDemos.forEach((_, idx) => {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.onclick = () => loadITW(idx);
+                itwDotsEl.appendChild(dot);
+            });
+            itwCleanVid.onplay   = () => { if (!itwToggleInput.checked) itwTrajVid.play().catch(() => {}); };
+            itwCleanVid.onpause  = () => { if (!itwToggleInput.checked) itwTrajVid.pause(); };
+            itwCleanVid.onseeked = () => { if (!itwToggleInput.checked) itwTrajVid.currentTime = itwCleanVid.currentTime; };
+            itwTrajVid.onplay    = () => { if (itwToggleInput.checked)  itwCleanVid.play().catch(() => {}); };
+            itwTrajVid.onpause   = () => { if (itwToggleInput.checked)  itwCleanVid.pause(); };
+            itwTrajVid.onseeked  = () => { if (itwToggleInput.checked)  itwCleanVid.currentTime = itwTrajVid.currentTime; };
+            loadITW(0);
+        }
+
+        function loadITW(index) {
+            itwIndex = index;
+            itwCard.style.opacity = '0.5';
+            setTimeout(() => {
+                itwInputVid.src = `demo-inputs/${itwDemos[index].input}`;
+                itwCleanVid.src = `demos/${itwDemos[index].base}`;
+                itwTitleEl.innerText = itwDemos[index].title;
+                itwDotsEl.querySelectorAll('.dot').forEach((dot, idx) => dot.classList.toggle('active', idx === index));
+                itwInputVid.play().catch(() => {});
+                if (itwToggleInput.checked) {
+                    itwTrajVid.src = `demos/${itwDemos[index].traj}`;
+                    itwTrajVid.load();
+                    itwTrajVid.style.opacity = '1';
+                    itwTrajVid.style.pointerEvents = 'auto';
+                    itwCleanVid.style.pointerEvents = 'none';
+                    itwTrajVid.oncanplay = () => { itwTrajVid.play().catch(() => {}); itwTrajVid.oncanplay = null; };
+                } else {
+                    itwTrajVid.src = '';
+                    itwTrajVid.style.opacity = '0';
+                    itwTrajVid.style.pointerEvents = 'none';
+                    itwCleanVid.style.pointerEvents = 'auto';
+                    itwCleanVid.play().catch(() => {});
+                }
+                itwCard.style.opacity = '1';
+            }, 200);
+        }
+
+        function prevITW() { loadITW((itwIndex - 1 + itwDemos.length) % itwDemos.length); }
+        function nextITW() { loadITW((itwIndex + 1) % itwDemos.length); }
+
+        function toggleITWTraj() {
+            if (itwToggleInput.checked) {
+                if (!itwTrajVid.src || itwTrajVid.src === window.location.href) {
+                    itwTrajVid.src = `demos/${itwDemos[itwIndex].traj}`;
+                    itwTrajVid.load();
+                }
+                itwTrajVid.style.opacity = '1';
+                itwTrajVid.style.pointerEvents = 'auto';
+                itwCleanVid.style.pointerEvents = 'none';
+                itwTrajVid.currentTime = itwCleanVid.currentTime;
+                if (!itwCleanVid.paused) itwTrajVid.play().catch(() => {});
+            } else {
+                itwTrajVid.style.opacity = '0';
+                itwTrajVid.style.pointerEvents = 'none';
+                itwCleanVid.style.pointerEvents = 'auto';
+                itwCleanVid.currentTime = itwTrajVid.currentTime;
+                if (!itwTrajVid.paused) itwCleanVid.play().catch(() => {});
+            }
+        }
+
+        // Text-to-4D carousel
+        const t4dDemos = [
+            { title: "a robot doing jumping jacks",    base: "demos/davis-robot-jump_white_bg.mp4",            traj: "demos/davis-robot-jump_with_trajs_white_bg.mp4" },
+            { title: "a snow monster walking forward", base: "demos/davis-snow-monster-high-res_white_bg.mp4", traj: "demos/davis-snow-monster-high-res_with_trajs_white_bg.mp4" },
+            { title: "a wood monster walking",         base: "demos/davis-wood-monster-high-res_white_bg.mp4", traj: "demos/davis-wood-monster-high-res_with_trajs_white_bg.mp4" },
+        ];
+
+        let t4dIndex = 0;
+        const t4dClean   = document.getElementById('t4d-vid-clean');
+        const t4dTraj    = document.getElementById('t4d-vid-traj');
+        const t4dTitle   = document.getElementById('t4d-title');
+        const t4dToggle  = document.getElementById('t4d-traj-toggle');
+        const t4dCard    = document.getElementById('t4d-card');
+        const t4dDotsEl  = document.getElementById('t4d-nav-dots');
+
+        function initT4D() {
+            t4dDemos.forEach((_, idx) => {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.onclick = () => loadT4D(idx);
+                t4dDotsEl.appendChild(dot);
+            });
+            t4dClean.onplay   = () => { if (!t4dToggle.checked) t4dTraj.play().catch(() => {}); };
+            t4dClean.onpause  = () => { if (!t4dToggle.checked) t4dTraj.pause(); };
+            t4dClean.onseeked = () => { if (!t4dToggle.checked) t4dTraj.currentTime = t4dClean.currentTime; };
+            t4dTraj.onplay    = () => { if (t4dToggle.checked)  t4dClean.play().catch(() => {}); };
+            t4dTraj.onpause   = () => { if (t4dToggle.checked)  t4dClean.pause(); };
+            t4dTraj.onseeked  = () => { if (t4dToggle.checked)  t4dClean.currentTime = t4dTraj.currentTime; };
+            loadT4D(0);
+        }
+
+        function loadT4D(index) {
+            t4dIndex = index;
+            t4dCard.style.opacity = '0.5';
+
+            setTimeout(() => {
+                t4dTitle.innerText = ` "${t4dDemos[index].title}" `;
+                t4dDotsEl.querySelectorAll('.dot').forEach((dot, idx) => dot.classList.toggle('active', idx === index));
+                if (t4dToggle.checked) {
+                    t4dClean.src = t4dDemos[index].base;
+                    t4dTraj.src  = t4dDemos[index].traj;
+                    t4dTraj.load();
+                    t4dTraj.style.opacity = '1';
+                    t4dTraj.style.pointerEvents = 'auto';
+                    t4dClean.style.pointerEvents = 'none';
+                    t4dTraj.oncanplay = () => { t4dTraj.play().catch(() => {}); t4dTraj.oncanplay = null; };
+                } else {
+                    t4dClean.src = t4dDemos[index].base;
+                    t4dTraj.src  = '';
+                    t4dTraj.style.opacity = '0';
+                    t4dTraj.style.pointerEvents = 'none';
+                    t4dClean.style.pointerEvents = 'auto';
+                    t4dClean.play().catch(() => {});
+                }
+                t4dCard.style.opacity = '1';
+            }, 200);
+        }
+
+        function prevT4D() { loadT4D((t4dIndex - 1 + t4dDemos.length) % t4dDemos.length); }
+        function nextT4D() { loadT4D((t4dIndex + 1) % t4dDemos.length); }
+
+        function toggleT4DCarousel() {
+            if (t4dToggle.checked) {
+                if (!t4dTraj.src || t4dTraj.src === window.location.href) {
+                    t4dTraj.src = t4dDemos[t4dIndex].traj;
+                    t4dTraj.load();
+                }
+                t4dTraj.style.opacity = '1';
+                t4dTraj.style.pointerEvents = 'auto';
+                t4dClean.style.pointerEvents = 'none';
+                t4dTraj.currentTime = t4dClean.currentTime;
+                if (!t4dClean.paused) t4dTraj.play().catch(() => {});
+            } else {
+                t4dTraj.style.opacity = '0';
+                t4dTraj.style.pointerEvents = 'none';
+                t4dClean.style.pointerEvents = 'auto';
+                t4dClean.currentTime = t4dTraj.currentTime;
+                if (!t4dTraj.paused) t4dClean.play().catch(() => {});
+            }
+        }
+
+        // Table of Contents
+        function scrollToSection(id, linkEl) {
+            const target = document.getElementById(id);
+            if (!target) return;
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            target.classList.remove('section-pulse');
+            void target.offsetWidth;
+            target.classList.add('section-pulse');
+            target.addEventListener('animationend', () => target.classList.remove('section-pulse'), { once: true });
+            document.querySelectorAll('.toc-list a').forEach(a => a.classList.remove('toc-active'));
+            linkEl.classList.add('toc-active');
+        }
+
+        (function initTocObserver() {
+            const sections = [
+                { id: 'section-drops',    selector: '#section-drops' },
+                { id: 'section-abstract', selector: '#section-abstract' },
+                { id: 'section-pipeline', selector: '#section-pipeline' },
+                { id: 'section-panoptic', selector: '#section-panoptic' },
+                { id: 'section-truebones',selector: '#section-truebones' },
+                { id: 'section-itw',      selector: '#section-itw' },
+                { id: 'section-ablations',selector: '#section-ablations' },
+                { id: 'section-tracking', selector: '#section-tracking' },
+                { id: 'section-t4d',      selector: '#section-t4d' },
+            ];
+            const tocLinks = {};
+            document.querySelectorAll('.toc-list a').forEach(a => {
+                const href = a.getAttribute('href').replace('#', '');
+                tocLinks[href] = a;
+            });
+
+            const obs = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.id;
+                        document.querySelectorAll('.toc-list a').forEach(a => a.classList.remove('toc-active'));
+                        if (tocLinks[id]) tocLinks[id].classList.add('toc-active');
+                    }
+                });
+            }, { rootMargin: '-10% 0px -70% 0px', threshold: 0 });
+
+            sections.forEach(s => {
+                const el = document.getElementById(s.id);
+                if (el) obs.observe(el);
+            });
+        })();
+
+        function initBackToTop() {
+            const btn = document.getElementById('back-to-top-btn');
+            if (!btn) return;
+
+            const onScroll = () => {
+                btn.classList.toggle('show', window.scrollY > 260);
+            };
+
+            btn.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+            window.addEventListener('scroll', onScroll, { passive: true });
+            onScroll();
+        }
+
+        async function copyBibtex(buttonEl) {
+            const bibtexEl = document.getElementById('bibtex-entry');
+            if (!bibtexEl) return;
+            const text = bibtexEl.innerText;
+
+            try {
+                await navigator.clipboard.writeText(text);
+                const original = buttonEl.innerHTML;
+                buttonEl.textContent = "Copied";
+                setTimeout(() => {
+                    buttonEl.innerHTML = original;
+                }, 1200);
+            } catch {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            }
+        }
+
+        window.onload = () => { init(); initITW(); initT4D(); initLazyVideos(); initTocClamp(); initBackToTop(); };
+
+        function initTocClamp() {
+            const toc = document.getElementById('toc-sidebar');
+            if (!toc) return;
+            function update() {
+                const ideal = window.innerWidth / 2 - 600 - 16 - 240;
+                toc.classList.toggle('toc-clamped', ideal < 12);
+            }
+            update();
+            window.addEventListener('resize', update);
+        }
+    </script>
+</body>
+</html>

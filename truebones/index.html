@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Truebones</title>
+    <style>
+        :root {
+            --bg-color: #0b1120;
+            --card-bg: #151e32;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.25);
+            --accent-hover: #0ea5e9;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-subtle: rgba(56, 189, 248, 0.15);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .header-title h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.02em;
+        }
+        #status-text { color: var(--text-muted); font-size: 0.9em; margin-top: 4px; }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid var(--border-subtle);
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 9px 18px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 200;
+        }
+        .back-link:hover {
+            background: rgba(56, 189, 248, 0.16);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        /* Controls bar */
+        .controls {
+            background: var(--card-bg);
+            padding: 18px 22px;
+            border-radius: 12px;
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+        }
+        .control-group { display: flex; flex-direction: column; gap: 6px; }
+        .control-group label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+
+        select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+            background: #0f172a;
+            color: var(--text-main);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        select:hover { border-color: var(--accent); }
+
+        /* Section headers */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-top: 50px;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--accent);
+        }
+
+        /* Page note */
+        .page-note {
+            background: var(--card-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 16px 20px;
+            color: var(--text-main);
+            line-height: 1.7;
+            margin-top: 24px;
+            font-size: 0.95rem;
+        }
+        .page-note a { color: var(--accent); text-decoration: none; }
+        .page-note a:hover { text-decoration: underline; }
+
+        /* Citations */
+        .citations { margin-top: 50px; border-top: 1px solid var(--border-subtle); padding-top: 16px; color: var(--text-muted); font-size: 0.9rem; }
+        .citations p { margin: 8px 0; }
+        .citations a { color: var(--accent); text-decoration: none; }
+        .citations a:hover { text-decoration: underline; }
+
+        /* Training video */
+        .input-container { max-width: 480px; margin-top: 16px; }
+        /* Training video stacked layout + prescan toggle */
+        .training-video-wrap {
+            position: relative;
+            aspect-ratio: 16/9;
+        }
+        .training-video-wrap video {
+            width: 100%;
+            border-radius: 6px;
+            aspect-ratio: 16/9;
+        }
+        .train-vid-prescan {
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 2;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .train-vid-dyn {
+            position: relative;
+            z-index: 1;
+        }
+        .prescan-toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: var(--accent);
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #444;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: #fff;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+
+        /* Camera rows */
+        .camera-row {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 22px;
+            margin-bottom: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
+        }
+        .row-controls {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .cam-label {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-right: 6px;
+        }
+
+        /* Row control buttons */
+        .method-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid var(--border-subtle);
+            color: var(--accent);
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 7px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .method-btn:hover {
+            background: rgba(56, 189, 248, 0.16);
+            border-color: var(--accent);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px var(--accent-glow);
+        }
+
+        /* Video grid */
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+        .video-card { display: flex; flex-direction: column; gap: 8px; }
+
+        video { width: 100%; border-radius: 6px; aspect-ratio: 16 / 9; background: #000; box-shadow: 0 3px 10px rgba(0,0,0,0.4); }
+
+        /* Method labels */
+        .video-label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+        .video-label.label-gt   { color: #22c55e; }
+        .video-label.label-ours { color: var(--accent); }
+
+        /* Container */
+        .container { max-width: 1200px; margin: 0 auto; width: 100%; }
+
+        .back-to-top-btn {
+            position: fixed;
+            right: 20px;
+            bottom: 24px;
+            z-index: 220;
+            border: 1px solid var(--border-subtle);
+            background: rgba(56, 189, 248, 0.12);
+            color: var(--accent);
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+            opacity: 0;
+            transform: translateY(8px);
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+        }
+        .back-to-top-btn.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .back-to-top-btn:hover {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+
+    <div class="header">
+        <div class="header-title">
+            <h1>Truebones</h1>
+            <div id="status-text" >Select parameters to load videos</div>
+        </div>
+        <a href="../index.html" class="back-link">&larr; Back to Main Page</a>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>VIDEO</label>
+            <select id="video-select" onchange="updateVideos()">
+                <option value="camel-run">Camel Run</option>
+                <option value="bat-attackbite">Bat Attack/Bite</option>
+                <option value="bear-walkforward">Bear Walk Forward</option>
+                <option value="coyote-walking-st-6">Coyote Walking</option>
+                <option value="anaconda-strike">Anaconda Strike</option>
+                <option value="brown-bear-rise">Brown Bear Rise</option>
+                <option value="camel-restless">Camel Restless</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Playback Speed</label>
+            <select id="speed-select" onchange="setSpeed(this.value)">
+                <option value="0.25">0.25x</option>
+                <option value="0.5">0.5x</option>
+                <option value="1.0" selected>1.0x</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="page-note">
+        Evaluation on our synthetic TrueBones dataset <a href="#cite-4">[4]</a>.
+        We compare our method against SOTA dynamic monocular reconstruction methods: (i) optimization-based methods HiMoR <a href="#cite-1">[1]</a> and OriGS <a href="#cite-2">[2]</a>, (ii) generative-based Cog-NVS <a href="#cite-3">[3]</a>. The top video depicts the pre-scan and dynamic sequences, on which all models are trained on. Each row contains renders of all methods on a specific test camera alongside with the ground-truth.
+        <br>
+        Our method drastically outperforms the baselines in maintaining a consistent object geometry and sharp appearance, while accurately modeling the scene dynamics.
+    </div>
+
+    <div class="section-header">
+        <h3 class="section-title">Training Video</h3>
+    </div>
+    <div class="input-container">
+        <div class="video-card">
+            <div class="training-video-wrap">
+                <video id="vid-training-dyn" controls muted loop class="train-vid-dyn"></video>
+                <video id="vid-training-prescan" controls muted loop class="train-vid-prescan"></video>
+            </div>
+            <div class="prescan-toggle-row">
+                <span>Show Pre-scan</span>
+                <label class="switch">
+                    <input type="checkbox" id="prescan-toggle-main" onchange="togglePrescanMain(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-header">
+        <h3 class="section-title">Results</h3>
+    </div>
+    <div id="camera-rows-container">
+        </div>
+
+    <div class="citations">
+        <p id="cite-1">[1] Yiming Liang, Tianhan Xu, Yuta Kikuchi. HiMoR: Monocular Deformable Gaussian Reconstruction with Hierarchical Motion Representation, CVPR 2025</p>
+        <p id="cite-2">[2] Junyi Wu, Jiachen Tao, Haoxuan Wang, Gaowen Liu, Ramana Rao Kompella, Yan Yan. Orientation-anchored Hyper-Gaussian for 4D Reconstruction from Casual Videos, NeurIPS 2025</p>
+        <p id="cite-3">[3] Kaihua Chen*, Tarasha Khurana*, Deva Ramanan. Reconstruct, Inpaint, Test-Time Finetune: Dynamic Novel-view Synthesis from Monocular Videos, NeurIPS 2025</p>
+        <p id="cite-4">[4] TrueBones. <a href="https://www.truebones.com" target="_blank">truebones.com</a></p>
+    </div>
+
+    <script>
+        // State to track play status per camera row
+        let rowPlayState = {};
+        let lazyObserver = null;
+
+        function ensureVideoLoaded(video) {
+            if (!video.src && video.dataset.src) {
+                video.src = video.dataset.src;
+                video.load();
+            }
+        }
+
+        function initLazyObserver() {
+            if (lazyObserver) lazyObserver.disconnect();
+            lazyObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        ensureVideoLoaded(entry.target);
+                        lazyObserver.unobserve(entry.target);
+                    }
+                });
+            }, { rootMargin: '300px 0px' });
+
+            document.querySelectorAll('video[data-src]').forEach(v => lazyObserver.observe(v));
+        }
+
+        function updateVideos() {
+            const video = document.getElementById('video-select').value;
+            // Truebones structure uses ./<VIDEO>/eval
+            const basePath = `./${video}/eval`;
+
+            // 1. Update Training Video
+            const dynVid = document.getElementById('vid-training-dyn');
+            const prescanVid = document.getElementById('vid-training-prescan');
+            dynVid.src = `${video}/train_dyn_only.mp4`;
+            dynVid.load();
+            const prescanToggle = document.getElementById('prescan-toggle-main');
+            prescanToggle.checked = false;
+            prescanVid.style.opacity = '0';
+            prescanVid.style.pointerEvents = 'none';
+            prescanVid.src = '';
+
+            // 2. Generate Camera Rows (1 to 4 for Truebones)
+            const container = document.getElementById('camera-rows-container');
+            container.innerHTML = ""; // Clear existing
+
+            [1, 2, 3, 4].forEach(i => {
+                createCameraRow(container, video, i, basePath);
+            });
+
+            // Re-initialise the IntersectionObserver for newly inserted video[data-src] elements
+            initLazyObserver();
+            
+            document.getElementById('status-text').innerText = `Viewing: ${video}`;
+        }
+
+        function createCameraRow(container, videoName, camIdx, basePath) {
+            const camPath = `${basePath}/cam_${camIdx}`;
+            
+            // Define paths for this specific camera (Truebones naming)
+            const vidSources = {
+                'Testing GT': `${camPath}/gt.mp4`,
+                'Ours':       `${camPath}/ours.mp4`,
+                'HiMoR':      `${camPath}/himor.mp4`,
+                'Origs':      `${camPath}/origs.mp4`,
+                'Cog-NVS':    `${camPath}/cog-nvs.mp4`
+            };
+
+            const labelClass = {
+                'Testing GT': 'label-gt',
+                'Ours':       'label-ours'
+            };
+
+            // HTML Structure for the Row
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'camera-row';
+            
+            let gridHtml = '';
+            for (const [label, src] of Object.entries(vidSources)) {
+                const safeLabel = label.replace(/\s+/g, '-');
+                const uniqueId = `vid-cam${camIdx}-${safeLabel}`;
+                const cls = labelClass[label] || '';
+                
+                gridHtml += `
+                    <div class="video-card">
+                        <video id="${uniqueId}" data-src="${src}" controls muted loop preload="none" class="cam-video-${camIdx}"></video>
+                        <div class="video-label ${cls}">${label}</div>
+                    </div>
+                `;
+            }
+
+            rowDiv.innerHTML = `
+                <div class="row-controls">
+                    <span class="cam-label">Test Camera ${camIdx}</span>
+                    <button id="btn-play-${camIdx}" class="method-btn" onclick="toggleRowPlay(${camIdx})">&#9654; Play All</button>
+                    <button class="method-btn" onclick="resetRow(${camIdx})">&#8635; Reset All</button>
+                </div>
+                <div class="video-grid">
+                    ${gridHtml}
+                </div>
+            `;
+
+            container.appendChild(rowDiv);
+            rowPlayState[camIdx] = false; 
+        }
+
+        function toggleRowPlay(camIdx) {
+            const videos = document.querySelectorAll(`.cam-video-${camIdx}`);
+            const btn = document.getElementById(`btn-play-${camIdx}`);
+            const isPlaying = rowPlayState[camIdx];
+
+            if (isPlaying) {
+                videos.forEach(v => v.pause());
+                btn.innerHTML = "&#9654; Play All";
+                rowPlayState[camIdx] = false;
+            } else {
+                videos.forEach(v => { ensureVideoLoaded(v); v.play().catch(() => {}); });
+                btn.innerHTML = "&#9646;&#9646; Pause All";
+                rowPlayState[camIdx] = true;
+            }
+        }
+
+        function resetRow(camIdx) {
+            const videos = document.querySelectorAll(`.cam-video-${camIdx}`);
+            videos.forEach(v => {
+                v.currentTime = 0;
+            });
+        }
+
+        function setSpeed(speed) {
+            document.querySelectorAll('video').forEach(v => {
+                v.playbackRate = parseFloat(speed);
+            });
+        }
+
+        function togglePrescanMain(checkbox) {
+            const video = document.getElementById('video-select').value;
+            const dynVid = document.getElementById('vid-training-dyn');
+            const prescanVid = document.getElementById('vid-training-prescan');
+            if (checkbox.checked) {
+                if (!prescanVid.src) {
+                    prescanVid.src = `${video}/train.mp4`;
+                    prescanVid.load();
+                }
+                prescanVid.style.opacity = '1';
+                prescanVid.style.pointerEvents = 'auto';
+                prescanVid.currentTime = dynVid.currentTime;
+                if (!dynVid.paused) prescanVid.play().catch(() => {});
+            } else {
+                prescanVid.style.opacity = '0';
+                prescanVid.style.pointerEvents = 'none';
+                dynVid.currentTime = prescanVid.currentTime;
+                if (!prescanVid.paused) dynVid.play().catch(() => {});
+            }
+        }
+
+        window.onload = () => {
+            updateVideos();
+            initBackToTop();
+        };
+    </script>
+
+    </div><!-- /.container -->
+    <button id="back-to-top-btn" class="back-to-top-btn" type="button" aria-label="Back to top">Back to Top</button>
+
+    <script>
+        function initBackToTop() {
+            const btn = document.getElementById('back-to-top-btn');
+            if (!btn) return;
+
+            const onScroll = () => {
+                btn.classList.toggle('show', window.scrollY > 260);
+            };
+
+            btn.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+            window.addEventListener('scroll', onScroll, { passive: true });
+            onScroll();
+        }
+    </script>
+</body>
+</html>
